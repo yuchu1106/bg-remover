@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>批量圖片去背工具</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- JSZip：打包 ZIP 用 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">✂</span>
+      <div>
+        <h1>批量圖片去背</h1>
+        <p>瀏覽器本機 AI 運算・圖片不上傳伺服器・完全免費</p>
+      </div>
+    </div>
+    <div class="settings">
+      <label for="engineSelect">引擎</label>
+      <select id="engineSelect">
+        <option value="rmbg" selected>RMBG（細節佳・商品/飾品）</option>
+        <option value="imgly">IS-Net（人像）</option>
+      </select>
+      <label for="modelSelect">品質</label>
+      <select id="modelSelect">
+        <option value="small">快速</option>
+        <option value="medium" selected>高品質</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- 上傳區 -->
+    <section id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="上傳圖片">
+      <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
+      <div class="dz-icon">⬆</div>
+      <p class="dz-title">拖曳圖片到這裡，或 <span class="link">點擊選擇檔案</span></p>
+      <p class="dz-hint">支援 JPG / PNG / WEBP・單張 ≤ 10MB・最多 50 張</p>
+    </section>
+
+    <!-- 提示訊息 -->
+    <div id="toastArea" class="toast-area" aria-live="polite"></div>
+
+    <!-- 工具列 -->
+    <section id="toolbar" class="toolbar hidden">
+      <div class="summary">
+        <strong id="countText">0 / 50 張</strong>
+        <span id="statusText">等待中</span>
+        <div class="overall"><div id="overallBar" class="overall-bar"></div></div>
+      </div>
+      <div class="actions">
+        <button id="clearBtn" class="btn ghost">清除全部</button>
+        <button id="zipBtn" class="btn primary" disabled>⬇ 打包下載全部 (ZIP)</button>
+      </div>
+    </section>
+
+    <!-- 結果卡片 -->
+    <section id="grid" class="grid"></section>
+  </main>
+
+  <footer class="footer">
+    首次使用需下載 AI 模型（之後會快取）。處理速度取決於您的電腦效能。
+  </footer>
+
+  <template id="cardTpl">
+    <article class="card">
+      <div class="previews">
+        <figure>
+          <div class="img-box"><img class="orig" alt="原圖" /></div>
+          <figcaption>原圖</figcaption>
+        </figure>
+        <figure>
+          <div class="img-box checker">
+            <img class="result hidden" alt="去背結果" />
+            <div class="placeholder"><div class="spinner"></div></div>
+          </div>
+          <figcaption>去背結果</figcaption>
+        </figure>
+      </div>
+      <div class="meta">
+        <p class="name"></p>
+        <p class="state">等待中</p>
+        <div class="progress"><div class="bar"></div></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn small primary dl" disabled>下載 PNG</button>
+        <button class="btn small ghost edit" disabled title="手動還原／擦除">🖌 修圖</button>
+        <button class="btn small ghost retry hidden" title="用目前選擇的引擎重新處理">重新處理</button>
+        <button class="btn small ghost remove" title="移除">✕</button>
+      </div>
+    </article>
+  </template>
+
+  <!-- 手動修圖視窗 -->
+  <div id="editor" class="editor hidden" role="dialog" aria-modal="true" aria-label="手動修圖">
+    <div class="editor-panel">
+      <div class="editor-head">
+        <div>
+          <strong>手動修圖</strong>
+          <p class="ed-hint">用「還原」塗回被誤刪的部分（例如鍊子、腳），用「擦除」清掉殘留背景。淡淡的原圖可以當描圖參考。</p>
+        </div>
+        <button id="edClose" class="btn small ghost" aria-label="關閉">✕</button>
+      </div>
+      <div class="editor-tools">
+        <div class="seg">
+          <button data-mode="keep" class="active" title="快捷鍵 B">🖌 還原</button>
+          <button data-mode="erase" title="快捷鍵 E">🧽 擦除</button>
+        </div>
+        <label>筆刷 <input type="range" id="edSize" min="2" max="120" value="24" /> <span id="edSizeVal">24</span></label>
+        <label title="讓 AI 判斷為半透明的地方變實">邊緣補強 <input type="range" id="edBoost" min="0" max="100" value="0" /></label>
+        <label>縮放
+          <select id="edZoom">
+            <option value="1">適合畫面</option>
+            <option value="2">200%</option>
+            <option value="3">300%</option>
+            <option value="4">400%</option>
+          </select>
+        </label>
+        <label class="chk"><input type="checkbox" id="edRef" checked /> 顯示原圖參考</label>
+        <button id="edUndo" class="btn small ghost" title="Cmd/Ctrl + Z">↶ 復原</button>
+        <button id="edReset" class="btn small ghost">重設</button>
+      </div>
+      <div class="editor-stage" id="edStage">
+        <div class="editor-canvas-wrap checker" id="edWrap">
+          <img id="edRefImg" alt="" />
+          <canvas id="edCanvas"></canvas>
+          <div id="edCursor" class="ed-cursor"></div>
+        </div>
+      </div>
+      <div class="editor-foot">
+        <button id="edCancel" class="btn ghost">取消</button>
+        <button id="edSave" class="btn primary">套用</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="editor.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
