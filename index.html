@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>批量圖片去背工具</title>
   <link rel="stylesheet" href="style.css" />
   <!-- JSZip：打包 ZIP 用 -->
@@ -99,7 +99,7 @@
       <div class="editor-head">
         <div>
           <strong>手動修圖</strong>
-          <p class="ed-hint">用「還原」塗回被誤刪的部分（例如鍊子、腳），用「擦除」清掉殘留背景。淡淡的原圖可以當描圖參考。</p>
+          <p class="ed-hint">被誤刪的地方用「🖌 還原」塗回或「🪄 點選還原」點一下；殘留背景用「🧽 擦除」、「去除殘影」或「✨ 清除雜點」。放大後兩指拖曳可移動。</p>
         </div>
         <button id="edClose" class="btn small ghost" aria-label="關閉">✕</button>
       </div>
@@ -107,18 +107,23 @@
         <div class="seg">
           <button data-mode="keep" class="active" title="快捷鍵 B">🖌 還原</button>
           <button data-mode="erase" title="快捷鍵 E">🧽 擦除</button>
+          <button data-mode="magic" title="點一下自動補回顏色相近的區域（快捷鍵 M）">🪄 點選還原</button>
+          <button data-mode="pan" title="拖曳移動畫面（也可以兩指拖曳）">✋ 移動</button>
         </div>
         <label>筆刷 <input type="range" id="edSize" min="2" max="120" value="24" /> <span id="edSizeVal">24</span></label>
-        <label title="讓 AI 判斷為半透明的地方變實">邊緣補強 <input type="range" id="edBoost" min="0" max="100" value="0" /></label>
+        <label id="edTolWrap" class="hidden" title="越大補回的範圍越大">容許度 <input type="range" id="edTol" min="4" max="80" value="16" /></label>
+        <label title="讓 AI 判斷為半透明的主體變實（例如絨毛、腳）">邊緣補強 <input type="range" id="edBoost" min="0" max="100" value="0" /></label>
+        <label title="清掉背景殘留的淡淡痕跡">去除殘影 <input type="range" id="edCut" min="0" max="100" value="0" /></label>
+        <button id="edClean" class="btn small ghost" title="刪掉和主體不相連的小碎片">✨ 清除雜點</button>
         <label>縮放
           <select id="edZoom">
-            <option value="1">適合畫面</option>
+            <option value="1">完整</option>
             <option value="2">200%</option>
             <option value="3">300%</option>
             <option value="4">400%</option>
           </select>
         </label>
-        <label class="chk"><input type="checkbox" id="edRef" checked /> 顯示原圖參考</label>
+        <label class="chk"><input type="checkbox" id="edRef" checked /> 原圖參考</label>
         <button id="edUndo" class="btn small ghost" title="Cmd/Ctrl + Z">↶ 復原</button>
         <button id="edReset" class="btn small ghost">重設</button>
       </div>
@@ -129,6 +134,7 @@
           <div id="edCursor" class="ed-cursor"></div>
         </div>
       </div>
+      <div id="edFlash" class="ed-flash"></div>
       <div class="editor-foot">
         <button id="edCancel" class="btn ghost">取消</button>
         <button id="edSave" class="btn primary">套用</button>

@@ -215,7 +215,7 @@ body {
   padding: 16px;
 }
 .editor-panel {
-  width: min(1100px, 100%); height: min(92vh, 900px);
+  width: min(1100px, 100%); height: min(92vh, 900px); height: min(92dvh, 900px);
   background: var(--surface); color: var(--text);
   border-radius: var(--radius); box-shadow: 0 10px 40px rgba(0,0,0,.3);
   display: flex; flex-direction: column; overflow: hidden;
@@ -232,8 +232,18 @@ body {
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .seg button { border: 0; background: transparent; color: var(--text); padding: 7px 12px; font: inherit; font-weight: 600; cursor: pointer; }
 .seg button.active { background: var(--primary); color: #fff; }
-.editor-stage { flex: 1; overflow: auto; background: var(--bg); display: grid; place-items: center; padding: 8px; min-height: 0; }
-.editor-canvas-wrap { position: relative; margin: auto; }
+/* 用 flex + margin:auto 置中：放大超出畫面時仍能捲到每個角落，不會被截掉 */
+.editor-stage { flex: 1; overflow: auto; background: var(--bg); display: flex; padding: 8px; min-height: 0; position: relative; -webkit-overflow-scrolling: touch; }
+.editor-canvas-wrap { position: relative; margin: auto; flex: none; }
+.editor-panel { position: relative; }
+.ed-flash {
+  position: absolute; left: 50%; bottom: 76px; z-index: 2;
+  transform: translateX(-50%); max-width: 90%;
+  background: rgba(20,24,40,.85); color: #fff; font-size: .82rem;
+  padding: 6px 12px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s;
+  text-align: center; width: max-content;
+}
+.ed-flash.show { opacity: 1; }
 .editor-canvas-wrap img, .editor-canvas-wrap canvas {
   position: absolute; inset: 0; width: 100%; height: 100%; display: block;
 }
@@ -256,6 +266,13 @@ body {
   .actions { width: 100%; }
   .actions .btn { flex: 1; }
   .editor { padding: 0; }
-  .editor-panel { height: 100vh; border-radius: 0; }
-  .editor-tools { gap: 8px 12px; }
+  .editor-panel { height: 100vh; height: 100dvh; border-radius: 0; }
+  .editor-head { padding: 10px 12px 4px; }
+  .ed-hint { display: none; }
+  /* 手機：工具列改成一排左右滑動，把空間留給圖片 */
+  .editor-tools { flex-wrap: nowrap; overflow-x: auto; gap: 10px; padding: 6px 12px 8px; -webkit-overflow-scrolling: touch; }
+  .editor-tools > * { flex: none; }
+  .editor-tools label, .seg button { white-space: nowrap; }
+  .editor-tools input[type="range"] { width: 80px; }
+  .editor-foot { padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
 }

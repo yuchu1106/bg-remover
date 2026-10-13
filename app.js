@@ -108,6 +108,10 @@ async function rmbgRemove(file, quantized, onProgress, onCompute) {
   }
 }
 
+// iPad / iPhone 記憶體較小，預設用「快速」模型避免分頁當掉
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+if (IS_IOS) window.addEventListener("DOMContentLoaded", () => { document.getElementById("modelSelect").value = "small"; });
+
 // 用 file:// 開啟時提示改用啟動檔
 if (location.protocol === "file:") {
   window.addEventListener("DOMContentLoaded", () => {
